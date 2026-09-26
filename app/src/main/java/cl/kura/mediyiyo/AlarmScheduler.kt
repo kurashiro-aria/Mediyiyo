@@ -9,7 +9,12 @@ object AlarmScheduler {
     private const val PREFS = "mediyiyo_alarms"
 
     fun schedule(context: Context, medId: String, medName: String, intervalHours: Int, lastTakenMillis: Long) {
-        val next = lastTakenMillis + intervalHours * 60L * 60L * 1000L
+        val intervalMillis = intervalHours * 60L * 60L * 1000L
+        var next = lastTakenMillis + intervalMillis
+        val now = System.currentTimeMillis()
+        if (next <= now) {
+            next += ((now - next) / intervalMillis + 1) * intervalMillis
+        }
         save(context, medId, medName, intervalHours, next)
         scheduleAt(context, medId, medName, intervalHours, next)
     }
@@ -46,7 +51,9 @@ object AlarmScheduler {
             val name=p.getString("${id}_name",id) ?: id
             val hours=p.getInt("${id}_hours",24)
             var next=p.getLong("${id}_next",0L)
-            while(next <= System.currentTimeMillis()) next += hours*60L*60L*1000L
+            val intervalMillis = hours * 60L * 60L * 1000L
+            val now = System.currentTimeMillis()
+            if (next <= now) next += ((now - next) / intervalMillis + 1) * intervalMillis
             save(context,id,name,hours,next)
             scheduleAt(context,id,name,hours,next)
         }
