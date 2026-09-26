@@ -12,8 +12,27 @@ android {
         applicationId = "cl.kura.mediyiyo"
         minSdk = 23
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("MEDIYIYO_KEYSTORE_PATH")
+            if (!storeFilePath.isNullOrBlank()) {
+                storeFile = file(storeFilePath)
+                storePassword = System.getenv("MEDIYIYO_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("MEDIYIYO_KEY_ALIAS")
+                keyPassword = System.getenv("MEDIYIYO_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+        }
     }
 
     compileOptions {
