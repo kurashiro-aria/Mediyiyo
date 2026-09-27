@@ -12,7 +12,10 @@ android {
         applicationId = "cl.kura.mediyiyo"
         minSdk = 23
         targetSdk = 35
-        versionCode = 3
+        versionCode = providers.gradleProperty("mediyiyoVersionCode")
+            .map { it.toInt().also { code -> require(code > 3) { "Release versionCode must exceed 3" } } }
+            .orElse(3)
+            .get()
         versionName = "0.3.0"
     }
 
