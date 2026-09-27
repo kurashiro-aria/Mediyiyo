@@ -11,6 +11,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -165,7 +167,20 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
  if(adding)AddMedicineDialog({adding=false}){name,doses,info->saveCustomMed(context,Medicine("custom_${UUID.randomUUID()}",name,if(doses==1)"1 vez al día" else "$doses tomas diarias",doses=doses,info=info));custom=loadCustomMeds(context);medicines=orderedMeds(context,custom);adding=false}
  MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFF2DD4BF),background=Color(0xFF07131F),surface=Color(0xFF102235))){Column(Modifier.fillMaxSize().background(Color(0xFF07131F)).verticalScroll(rememberScrollState()).padding(vertical=12.dp)){
   Column(Modifier.fillMaxWidth().padding(horizontal=12.dp)){
-      Text("Calendario de tomas",color=Color.White,fontWeight=FontWeight.Bold,fontSize=20.sp)
+      Row(verticalAlignment=Alignment.CenterVertically){
+          Image(
+              painter=painterResource(R.drawable.ic_mediyiyo),
+              contentDescription="Logo Mediyiyo",
+              modifier=Modifier.size(58.dp)
+          )
+          Spacer(Modifier.width(10.dp))
+          Column {
+              Text("Mediyiyo",color=Color.White,fontWeight=FontWeight.Bold,fontSize=22.sp)
+              Text("tomate las pastillas wn!",color=Color(0xFF5EEAD4),fontSize=13.sp)
+          }
+      }
+      Spacer(Modifier.height(8.dp))
+      Text("Calendario de tomas",color=Color.White,fontWeight=FontWeight.Bold,fontSize=18.sp)
       Text(dayLabel,color=Color(0xFF5EEAD4),fontWeight=FontWeight.Bold,fontSize=16.sp)
   }
   Row(Modifier.fillMaxWidth().padding(8.dp),horizontalArrangement=Arrangement.SpaceBetween){Row{Button(onClick={adding=true}){Text("＋ Medicamento")};Spacer(Modifier.width(5.dp));Button(onClick={reorder=!reorder}){Text(if(reorder)"✓ Orden" else "↕ Orden")};Spacer(Modifier.width(5.dp));Button(onClick=onPickSound){Text("🔔")}}}
