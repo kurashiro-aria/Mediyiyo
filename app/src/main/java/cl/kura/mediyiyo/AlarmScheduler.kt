@@ -66,6 +66,30 @@ object AlarmScheduler {
             .apply()
     }
 
+    fun cancel(context: Context, alarmId: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = (prefs.getStringSet("ids", emptySet()) ?: emptySet())
+            .toMutableSet().apply { remove(alarmId) }
+        prefs.edit()
+            .putStringSet("ids", ids)
+            .remove("${alarmId}_name")
+            .remove("${alarmId}_time")
+            .remove("${alarmId}_next")
+            .apply()
+        val pending = PendingIntent.getBroadcast(
+            context,
+            alarmId.hashCode(),
+            Intent(context, MedicationAlarmReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (pending != null) {
+            (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending)
+            pending.cancel()
+        }
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
+            .cancel(alarmId.hashCode())
+    }
+
     fun scheduleNextDay(context: Context, alarmId: String, medName: String) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val time = LocalTime.parse(prefs.getString("${alarmId}_time", "08:00"))

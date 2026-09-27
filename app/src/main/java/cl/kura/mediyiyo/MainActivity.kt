@@ -59,7 +59,26 @@ private val defaultMeds=listOf(
 private fun customPrefs(c:Context)=c.getSharedPreferences("mediyiyo_custom_meds",Context.MODE_PRIVATE)
 private fun loadCustomMeds(c:Context):List<Medicine>{val p=customPrefs(c);val ids=p.getStringSet("ids",emptySet())?:emptySet();return ids.mapNotNull{id->val n=p.getString("${id}_name",null)?:return@mapNotNull null;val d=p.getInt("${id}_doses",1).coerceIn(1,4);Medicine(id,n,if(d==1)"1 vez al día" else "$d tomas diarias",doses=d,info=p.getString("${id}_info","")?:"")}}
 private fun saveCustomMed(c:Context,m:Medicine){val p=customPrefs(c);val ids=(p.getStringSet("ids",emptySet())?:emptySet()).toMutableSet().apply{add(m.id)};p.edit().putStringSet("ids",ids).putString("${m.id}_name",m.name).putInt("${m.id}_doses",m.doses).putString("${m.id}_info",m.info).apply()}
-private fun orderedMeds(c:Context,custom:List<Medicine>):List<Medicine>{val all=defaultMeds+custom;val order=c.getSharedPreferences("mediyiyo_order",Context.MODE_PRIVATE).getString("ids",null)?.split("|")?.filter{it.isNotBlank()}?:emptyList();return all.sortedBy{val i=order.indexOf(it.id);if(i<0)Int.MAX_VALUE else i}}
+private fun orderedMeds(c:Context,custom:List<Medicine>):List<Medicine>{
+    val hidden=c.getSharedPreferences("mediyiyo_hidden_meds",Context.MODE_PRIVATE)
+        .getStringSet("ids",emptySet())?:emptySet()
+    val all=(defaultMeds+custom).filterNot{it.id in hidden}
+    val order=c.getSharedPreferences("mediyiyo_order",Context.MODE_PRIVATE)
+        .getString("ids",null)?.split("|")?.filter{it.isNotBlank()}?:emptyList()
+    return all.sortedBy{val i=order.indexOf(it.id);if(i<0)Int.MAX_VALUE else i}
+}
+private fun hideMedicine(c:Context,m:Medicine){
+    val p=c.getSharedPreferences("mediyiyo_hidden_meds",Context.MODE_PRIVATE)
+    val ids=(p.getStringSet("ids",emptySet())?:emptySet()).toMutableSet().apply{add(m.id)}
+    p.edit().putStringSet("ids",ids).apply()
+    val schedule=c.getSharedPreferences("mediyiyo_schedule",Context.MODE_PRIVATE).edit()
+    repeat(m.doses){dose->
+        val id="${m.id}_dose_$dose"
+        AlarmScheduler.cancel(c,id)
+        schedule.remove(id)
+    }
+    schedule.apply()
+}
 private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("mediyiyo_order",Context.MODE_PRIVATE).edit().putString("ids",list.joinToString("|"){it.id}).apply()}
 
 @Composable fun MediyiyoApp(context:Context,onPickSound:()->Unit){
@@ -70,6 +89,7 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
  var medicines by remember{mutableStateOf(orderedMeds(context,custom))}
  var currentDate by remember{mutableStateOf(LocalDate.now())}
  var pendingDelete by remember{mutableStateOf<PendingDelete?>(null)}
+ var pendingRemoval by remember{mutableStateOf<Medicine?>(null)}
  var timeEdit by remember{mutableStateOf<TimeEdit?>(null)}
  var adding by remember{mutableStateOf(false)}
  var infoMed by remember{mutableStateOf<Medicine?>(null)}
@@ -105,6 +125,7 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
  }
  LaunchedEffect(currentDate,medicines){
      states.clear()
+     schedules.clear()
      medicines.forEach{m->
          repeat(m.doses){dose->
              val id=alarmId(m,dose)
@@ -121,6 +142,18 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
      }
  }
  pendingDelete?.let{p->AlertDialog(onDismissRequest={pendingDelete=null},title={Text("¿Desmarcar esta toma?")},text={Text("Se quitará la confirmación de hoy para ${p.medicine.name}. La hora programada se conservará.")},confirmButton={Button(onClick={prefs.edit().remove(p.key).apply();states[p.key]=DoseState();pendingDelete=null}){Text("Sí, desmarcar")}},dismissButton={TextButton(onClick={pendingDelete=null}){Text("Cancelar")}})}
+ pendingRemoval?.let{m->AlertDialog(
+     onDismissRequest={pendingRemoval=null},
+     title={Text("¿Quitar ${m.name}?")},
+     text={Text("Se quitará de la lista y se cancelarán sus alarmas. Las tomas guardadas no se borrarán.")},
+     confirmButton={Button(onClick={
+         hideMedicine(context,m)
+         medicines=medicines.filterNot{it.id==m.id}
+         saveOrder(context,medicines)
+         pendingRemoval=null
+     }){Text("Sí, quitar")}},
+     dismissButton={TextButton(onClick={pendingRemoval=null}){Text("Cancelar")}}
+ )}
  timeEdit?.let{e->TypedTimeDialog(e.current,{timeEdit=null}){t->
      val id=alarmId(e.medicine,e.dose)
      schedulePrefs.edit().putString(id,t).apply()
@@ -128,7 +161,7 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
      AlarmScheduler.scheduleFromPreviousDose(context,id,e.medicine.name,LocalDate.now().minusDays(1),LocalTime.parse(t,fmt))
      timeEdit=null
  }}
- infoMed?.let{m->MedicineInfoDialog(m){infoMed=null}}
+ infoMed?.let{m->MedicineInfoDialog(m,{infoMed=null}){infoMed=null;pendingRemoval=m}}
  if(adding)AddMedicineDialog({adding=false}){name,doses,info->saveCustomMed(context,Medicine("custom_${UUID.randomUUID()}",name,if(doses==1)"1 vez al día" else "$doses tomas diarias",doses=doses,info=info));custom=loadCustomMeds(context);medicines=orderedMeds(context,custom);adding=false}
  MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFF2DD4BF),background=Color(0xFF07131F),surface=Color(0xFF102235))){Column(Modifier.fillMaxSize().background(Color(0xFF07131F)).verticalScroll(rememberScrollState()).padding(vertical=12.dp)){
   Column(Modifier.fillMaxWidth().padding(horizontal=12.dp)){
@@ -168,10 +201,24 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
           }
       }
   }
-  Text(if(reorder)"Usa ▲ y ▼ para cambiar el orden. El historial y las alarmas no cambian." else "Toca el nombre para ver su información. Toca la hora para configurarla; se conserva al cambiar de día.",color=Color(0xFF91A6BA),fontSize=13.sp,modifier=Modifier.padding(16.dp))
+  Text(if(reorder)"Usa ▲ y ▼ para cambiar el orden. El historial y las alarmas no cambian." else "Toca el nombre para ver información o quitar el medicamento. Toca la hora para configurarla; se conserva al cambiar de día.",color=Color(0xFF91A6BA),fontSize=13.sp,modifier=Modifier.padding(16.dp))
  }}
 }
-@Composable private fun MedicineInfoDialog(m:Medicine,onDismiss:()->Unit){AlertDialog(onDismissRequest=onDismiss,title={Text(m.name)},text={Column{Text(m.detail,fontWeight=FontWeight.Bold);Spacer(Modifier.height(10.dp));Text(if(m.info.isBlank())"No hay una descripción guardada para este medicamento." else m.info);Spacer(Modifier.height(12.dp));Text("Información general. Sigue siempre la indicación y dosis entregadas por tu profesional de salud.",fontSize=12.sp)}},confirmButton={Button(onClick=onDismiss){Text("Cerrar")}})}
+@Composable private fun MedicineInfoDialog(m:Medicine,onDismiss:()->Unit,onRemove:()->Unit){
+    AlertDialog(
+        onDismissRequest=onDismiss,
+        title={Text(m.name)},
+        text={Column{
+            Text(m.detail,fontWeight=FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+            Text(if(m.info.isBlank())"No hay una descripción guardada para este medicamento." else m.info)
+            Spacer(Modifier.height(12.dp))
+            Text("Información general. Sigue siempre la indicación y dosis entregadas por tu profesional de salud.",fontSize=12.sp)
+        }},
+        confirmButton={Button(onClick=onDismiss){Text("Cerrar")}},
+        dismissButton={TextButton(onClick=onRemove){Text("Quitar")}
+    )
+}
 @Composable
 private fun AddMedicineDialog(onDismiss: () -> Unit, onSave: (String, Int, String) -> Unit) {
     var name by remember { mutableStateOf("") }

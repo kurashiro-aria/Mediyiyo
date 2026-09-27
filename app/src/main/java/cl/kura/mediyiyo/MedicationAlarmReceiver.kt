@@ -16,6 +16,9 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val medName = intent.getStringExtra("medName") ?: "Medicamento"
         val alarmId = intent.getStringExtra("alarmId") ?: medName
+        val active = context.getSharedPreferences("mediyiyo_alarms", Context.MODE_PRIVATE)
+            .getStringSet("ids", emptySet()) ?: emptySet()
+        if (alarmId !in active) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val saved = context.getSharedPreferences("mediyiyo_settings", Context.MODE_PRIVATE)
             .getString("alarm_sound", null)
