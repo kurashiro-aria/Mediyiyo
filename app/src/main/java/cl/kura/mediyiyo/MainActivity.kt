@@ -172,7 +172,92 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
  }}
 }
 @Composable private fun MedicineInfoDialog(m:Medicine,onDismiss:()->Unit){AlertDialog(onDismissRequest=onDismiss,title={Text(m.name)},text={Column{Text(m.detail,fontWeight=FontWeight.Bold);Spacer(Modifier.height(10.dp));Text(if(m.info.isBlank())"No hay una descripción guardada para este medicamento." else m.info);Spacer(Modifier.height(12.dp));Text("Información general. Sigue siempre la indicación y dosis entregadas por tu profesional de salud.",fontSize=12.sp)}},confirmButton={Button(onClick=onDismiss){Text("Cerrar")}})}
-@Composable private fun AddMedicineDialog(onDismiss:()->Unit,onSave:(String,Int,String)->Unit){var name by remember{mutableStateOf("")};var doses by remember{mutableStateOf("1")};var info by remember{mutableStateOf("")};val n=doses.toIntOrNull();AlertDialog(onDismissRequest=onDismiss,title={Text("Agregar medicamento")},text={Column{OutlinedTextField(name,{name=it},label={Text("Nombre")},singleLine=true);Spacer(Modifier.height(8.dp));OutlinedTextField(doses,{if(it.length<=1)doses=it.filter(Char::isDigit)},label={Text("Tomas al día (1 a 4)")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true);Spacer(Modifier.height(8.dp));OutlinedTextField(info,{info=it},label={Text("Descripción breve (opcional)")},minLines=2,maxLines=4)}},confirmButton={Button(enabled=name.isNotBlank()&&n!=null&&n in 1..4,onClick={onSave(name.trim(),n!!,info.trim())}){Text("Agregar")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancelar")}})}
+@Composable
+private fun AddMedicineDialog(onDismiss: () -> Unit, onSave: (String, Int, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var doses by remember { mutableStateOf("1") }
+    var info by remember { mutableStateOf("") }
+    var selectedSuggestion by remember { mutableStateOf(false) }
+    val suggestions = remember(name, selectedSuggestion) {
+        if (selectedSuggestion) emptyList() else MedicineCatalog.search(name)
+    }
+    val n = doses.toIntOrNull()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Agregar medicamento") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        selectedSuggestion = false
+                    },
+                    label = { Text("Nombre") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (suggestions.isNotEmpty()) {
+                    Text(
+                        "Sugerencias del catálogo · toca para seleccionar",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 180.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        suggestions.forEach { medicine ->
+                            TextButton(
+                                onClick = {
+                                    name = medicine.name
+                                    info = medicine.info
+                                    selectedSuggestion = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    medicine.name,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Start
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = doses,
+                    onValueChange = { if (it.length <= 1) doses = it.filter(Char::isDigit) },
+                    label = { Text("Tomas al día (1 a 4)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = info,
+                    onValueChange = { info = it },
+                    label = { Text("Descripción breve (opcional)") },
+                    minLines = 2,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = name.isNotBlank() && n != null && n in 1..4,
+                onClick = { onSave(name.trim(), n!!, info.trim()) }
+            ) { Text("Agregar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
 @Composable private fun TypedTimeDialog(current:String,onDismiss:()->Unit,onSave:(String)->Unit){var h by remember(current){mutableStateOf(current.substringBefore(":"))};var m by remember(current){mutableStateOf(current.substringAfter(":"))};val ph=h.toIntOrNull();val pm=m.toIntOrNull();val valid=ph!=null&&ph in 0..23&&pm!=null&&pm in 0..59;AlertDialog(onDismissRequest=onDismiss,title={Text("Cambiar hora")},text={Row(verticalAlignment=Alignment.CenterVertically){OutlinedTextField(h,{if(it.length<=2)h=it.filter(Char::isDigit)},label={Text("Hora")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,modifier=Modifier.width(100.dp));Text(" : ");OutlinedTextField(m,{if(it.length<=2)m=it.filter(Char::isDigit)},label={Text("Min")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,modifier=Modifier.width(100.dp))}},confirmButton={Button(enabled=valid,onClick={onSave(String.format("%02d:%02d",ph,pm))}){Text("Guardar")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancelar")}})}
 private fun rowHeight(m:Medicine)=if(m.doses>=2)(112+42*(m.doses-1)).dp else 112.dp
 @Composable private fun Header(t:String,today:Boolean=false){Box(Modifier.height(64.dp).fillMaxWidth().padding(2.dp).background(if(today)Color(0xFF173D43)else Color(0xFF172A3D),RoundedCornerShape(10.dp)),contentAlignment=Alignment.Center){Text(t,color=if(today)Color(0xFF5EEAD4)else Color.White,fontWeight=FontWeight.Bold,textAlign=TextAlign.Center,fontSize=13.sp)}}
