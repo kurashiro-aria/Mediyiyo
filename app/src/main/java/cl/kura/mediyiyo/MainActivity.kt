@@ -166,7 +166,7 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
  }}
  infoMed?.let{m->MedicineInfoDialog(m,{infoMed=null}){infoMed=null;pendingRemoval=m}}
  if(adding)AddMedicineDialog({adding=false}){name,doses,info->saveCustomMed(context,Medicine("custom_${UUID.randomUUID()}",name,if(doses==1)"1 vez al día" else "$doses tomas diarias",doses=doses,info=info));custom=loadCustomMeds(context);medicines=orderedMeds(context,custom);adding=false}
- MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFF2DD4BF),background=Color(0xFF07131F),surface=Color(0xFF102235))){Column(Modifier.fillMaxSize().background(Color(0xFF07131F)).verticalScroll(rememberScrollState()).padding(vertical=12.dp)){
+ MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFF2DD4BF),background=Color(0xFF010E17),surface=Color(0xFF102235))){Column(Modifier.fillMaxSize().background(Color(0xFF010E17)).verticalScroll(rememberScrollState()).padding(vertical=12.dp)){
   Column(Modifier.fillMaxWidth().padding(horizontal=12.dp)){
       Image(
           painter=painterResource(R.drawable.mediyiyo_brand_header),

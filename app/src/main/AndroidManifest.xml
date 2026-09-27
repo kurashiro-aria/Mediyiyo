@@ -7,8 +7,8 @@
     <application
         android:theme="@style/Theme.Mediyiyo"
         android:label="Mediyiyo"
-        android:icon="@drawable/mediyiyo_launcher"
-        android:roundIcon="@drawable/mediyiyo_launcher"
+        android:icon="@drawable/mediyiyo_launcher_square"
+        android:roundIcon="@drawable/mediyiyo_launcher_square"
         android:allowBackup="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
