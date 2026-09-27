@@ -216,7 +216,7 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
             Text("Información general. Sigue siempre la indicación y dosis entregadas por tu profesional de salud.",fontSize=12.sp)
         }},
         confirmButton={Button(onClick=onDismiss){Text("Cerrar")}},
-        dismissButton={TextButton(onClick=onRemove){Text("Quitar")}
+        dismissButton={TextButton(onClick=onRemove){Text("Quitar")}}
     )
 }
 @Composable
