@@ -16,7 +16,7 @@ android {
             .map { it.toInt().also { code -> require(code > 3) { "Release versionCode must exceed 3" } } }
             .orElse(3)
             .get()
-        versionName = "0.3.0"
+        versionName = "0.3.1"
     }
 
     signingConfigs {
