@@ -2,7 +2,7 @@ name: Build Mediyiyo APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/today-only-persistent-times ]
   workflow_dispatch:
 
 jobs:
