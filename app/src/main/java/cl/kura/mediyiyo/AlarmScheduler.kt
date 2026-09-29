@@ -4,6 +4,9 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import android.net.Uri
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -12,6 +15,20 @@ import java.time.ZonedDateTime
 object AlarmScheduler {
     private const val PREFS = "mediyiyo_alarms"
 
+    fun canScheduleExact(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        return alarmManager.canScheduleExactAlarms()
+    }
+
+    fun exactAlarmSettingsIntent(context: Context): Intent? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+        return Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
     fun scheduleFromPreviousDose(
         context: Context,
         alarmId: String,
@@ -19,19 +36,20 @@ object AlarmScheduler {
         referenceDate: LocalDate,
         referenceTime: LocalTime
     ) {
-        val now = ZonedDateTime.now()
+        val zone = ZoneId.systemDefault()
+        val now = ZonedDateTime.now(zone)
         var nextDate = referenceDate.plusDays(1)
-        var next = ZonedDateTime.of(nextDate, referenceTime, ZoneId.systemDefault())
+        var next = ZonedDateTime.of(nextDate, referenceTime, zone)
         while (!next.isAfter(now)) {
             nextDate = nextDate.plusDays(1)
-            next = ZonedDateTime.of(nextDate, referenceTime, ZoneId.systemDefault())
+            next = ZonedDateTime.of(nextDate, referenceTime, zone)
         }
         val triggerAt = next.toInstant().toEpochMilli()
         save(context, alarmId, medName, referenceTime, triggerAt)
         scheduleAt(context, alarmId, medName, triggerAt)
     }
 
-    private fun scheduleAt(context: Context, alarmId: String, medName: String, triggerAt: Long) {
+    private fun scheduleAt(context: Context, alarmId: String, medName: String, triggerAt: Long): Boolean {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, MedicationAlarmReceiver::class.java).apply {
             putExtra("alarmId", alarmId)
@@ -44,14 +62,16 @@ object AlarmScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(pending)
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= 31 && !alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-            } else {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-            }
+
+        // Medication reminders must not silently fall back to an inexact alarm:
+        // Android may delay those by many minutes while idle/batching alarms.
+        if (!canScheduleExact(context)) return false
+
+        return try {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+            true
         } catch (_: SecurityException) {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+            false
         }
     }
 
@@ -93,16 +113,18 @@ object AlarmScheduler {
     fun scheduleNextDay(context: Context, alarmId: String, medName: String) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val time = LocalTime.parse(prefs.getString("${alarmId}_time", "08:00"))
-        scheduleFromPreviousDose(context, alarmId, medName, LocalDate.now(), time)
+        scheduleFromPreviousDose(context, alarmId, medName, LocalDate.now(ZoneId.systemDefault()), time)
     }
 
     fun restoreAll(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val zone = ZoneId.systemDefault()
+        val now = ZonedDateTime.now(zone)
         prefs.getStringSet("ids", emptySet())?.forEach { id ->
             val name = prefs.getString("${id}_name", id) ?: id
             val time = LocalTime.parse(prefs.getString("${id}_time", "08:00"))
-            var next = ZonedDateTime.of(LocalDate.now(), time, ZoneId.systemDefault())
-            if (!next.isAfter(ZonedDateTime.now())) next = next.plusDays(1)
+            var next = ZonedDateTime.of(LocalDate.now(zone), time, zone)
+            if (!next.isAfter(now)) next = next.plusDays(1)
             val millis = next.toInstant().toEpochMilli()
             save(context, id, name, time, millis)
             scheduleAt(context, id, name, millis)
