@@ -11,6 +11,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 
 class MedicationAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -19,6 +20,7 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
         val active = context.getSharedPreferences("mediyiyo_alarms", Context.MODE_PRIVATE)
             .getStringSet("ids", emptySet()) ?: emptySet()
         if (alarmId !in active) return
+
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val saved = context.getSharedPreferences("mediyiyo_settings", Context.MODE_PRIVATE)
             .getString("alarm_sound", null)
@@ -31,6 +33,7 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
                 NotificationChannel(channelId, "Alarmas Mediyiyo", NotificationManager.IMPORTANCE_HIGH).apply {
                     description = "Avisos de medicamentos"
                     enableVibration(true)
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                     setSound(sound, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build())
                 }
             )
@@ -39,7 +42,7 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
         val notificationId = alarmId.hashCode()
         val open = PendingIntent.getActivity(
             context, notificationId,
-            Intent(context, MainActivity::class.java),
+            Intent(context, LauncherActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val acknowledge = PendingIntent.getBroadcast(
@@ -51,21 +54,23 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
         val displayTime = java.time.LocalTime.now()
             .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
 
-        manager.notify(
-            notificationId,
-            NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("$medName • $displayTime")
-                .setContentText("Es hora de tomar $medName")
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setSound(sound)
-                .setOngoing(true)
-                .setAutoCancel(false)
-                .setContentIntent(open)
-                .addAction(0, "ACEPTAR", acknowledge)
-                .build()
-        )
+        val notification = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle("💊 $medName • $displayTime")
+            .setContentText("Es hora de tomar tu medicamento")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Es hora de tomar $medName. ¡Que no se te pase!"))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setSound(sound)
+            .setVibrate(longArrayOf(0, 500, 300, 500))
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setContentIntent(open)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "¡YA SÉ, WN!", acknowledge)
+            .build()
+
+        manager.notify(notificationId, notification)
         AlarmScheduler.scheduleNextDay(context, alarmId, medName)
     }
 }
