@@ -10,12 +10,13 @@
         android:icon="@drawable/mediyiyo_launcher_square"
         android:roundIcon="@drawable/mediyiyo_launcher_square"
         android:allowBackup="true">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".LauncherActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".MainActivity" android:exported="false" />
         <receiver android:name=".MedicationAlarmReceiver" android:exported="false" />
         <receiver android:name=".AcknowledgeReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:enabled="true" android:exported="true">
