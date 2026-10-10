@@ -49,7 +49,7 @@ jobs:
           MEDIYIYO_KEY_PASSWORD: ${{ secrets.MEDIYIYO_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          gradle assembleRelease -PmediyiyoVersionCode="$((3 + GITHUB_RUN_NUMBER))"
+          gradle testDebugUnitTest assembleRelease -PmediyiyoVersionCode="$((3 + GITHUB_RUN_NUMBER))"
 
       - name: Verify release signature
         run: |
@@ -61,6 +61,6 @@ jobs:
       - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mediyiyo-0.3.6-release
+          name: Mediyiyo-0.4.0-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

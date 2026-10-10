@@ -16,7 +16,7 @@ android {
             .map { it.toInt().also { code -> require(code > 3) { "Release versionCode must exceed 3" } } }
             .orElse(3)
             .get()
-        versionName = "0.3.6"
+        versionName = "0.4.0"
     }
 
     signingConfigs {
@@ -54,4 +54,5 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
 }
