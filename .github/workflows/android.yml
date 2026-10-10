@@ -58,6 +58,25 @@ jobs:
           test -n "$apksigner"
           "$apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
 
+      - name: Verify package, version and original certificate
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/release/app-release.apk
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$apksigner" && test -n "$aapt"
+          expected_cert=047d8d32bd01378648e99ad9a67f9a40e7fce4b93449b8e7e40adec7c8a338f5
+          cert_output="$("$apksigner" verify --print-certs "$apk")"
+          cert_digest="$(printf '%s\n' "$cert_output" | awk -F': ' '/certificate SHA-256 digest/ {print tolower($2); exit}' | tr -d '[:space:]:' )"
+          test "$cert_digest" = "$expected_cert"
+          package_line="$("$aapt" dump badging "$apk" | sed -n '1p')"
+          expected_code="$((3 + GITHUB_RUN_NUMBER))"
+          [[ "$package_line" == *"name='cl.kura.mediyiyo'"* ]]
+          [[ "$package_line" == *"versionCode='$expected_code'"* ]]
+          [[ "$package_line" == *"versionName='0.4.0'"* ]]
+          echo "$package_line"
+          echo "Original Mediyiyo certificate SHA-256 verified."
+
       - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:

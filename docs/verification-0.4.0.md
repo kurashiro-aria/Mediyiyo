@@ -4,6 +4,7 @@
 
 - `testDebugUnitTest`: identifica la misma toma desde el ID de alarma y la pantalla; separa fechas y tomas; ordena varios horarios sin combinar sus identidades.
 - `assembleRelease` y `apksigner verify`: compilan y verifican la APK con los Secrets existentes.
+- `aapt` y `apksigner --print-certs`: comprueban `applicationId`, `versionCode`, `versionName` y la huella SHA-256 del certificado original antes de subir el artefacto.
 
 ## Pendiente de prueba en un teléfono Android
 
