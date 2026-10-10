@@ -67,7 +67,7 @@ jobs:
           test -n "$apksigner" && test -n "$aapt"
           expected_cert=047d8d32bd01378648e99ad9a67f9a40e7fce4b93449b8e7e40adec7c8a338f5
           cert_output="$("$apksigner" verify --print-certs "$apk")"
-          cert_digest="$(printf '%s\n' "$cert_output" | awk -F': ' '/certificate SHA-256 digest/ {print tolower($2); exit}' | tr -d '[:space:]:' )"
+          cert_digest="$(printf '%s\n' "$cert_output" | awk -F': ' '/certificate SHA-256 digest/ {print tolower($NF); exit}' | tr -d '[:space:]:' )"
           echo "Release certificate SHA-256: $cert_digest"
           package_line="$("$aapt" dump badging "$apk" | sed -n '1p')"
           echo "$package_line"
