@@ -75,6 +75,17 @@ object MedicineCatalog {
         .replace("\\p{Mn}+".toRegex(), "")
         .trim()
 
+    fun existingDescription(name: String): String? {
+        val normalized = normalize(name)
+        return items.firstOrNull { item ->
+            val entry = normalize(item.name)
+            normalized == entry || normalized.startsWith("$entry ")
+        }?.info
+    }
+
+    fun descriptionFor(name: String, saved: String): String =
+        saved.ifBlank { existingDescription(name).orEmpty() }
+
     fun search(query: String, limit: Int = 8): List<CatalogMedicine> {
         val q = normalize(query)
         if (q.length < 2) return emptyList()

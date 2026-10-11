@@ -209,7 +209,7 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
     val slots=DoseTimeline.chronological(medicines.flatMapIndexed{index,m->
         (0 until m.doses).map{dose->DoseSlot(m.id,dose,schedules[alarmId(m,dose)],index)}
     })
-    MaterialTheme(colorScheme=lightColorScheme(primary=Color(0xFF1166C9),background=Color(0xFFF9FBFD),surface=Color.White)){
+    MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFF2DD4BF),background=Color(0xFF010E17),surface=Color(0xFF102235))){
         pendingConfirm?.let{a->AlertDialog(
             onDismissRequest={pendingConfirm=null},
             title={Text("¿Confirmar esta toma?")},
@@ -274,7 +274,9 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
             states[DoseRecords.key(e.medicine.id,e.date,e.dose)]=DoseState(true,t)
             recordEdit=null
         }}
-        infoMed?.let{m->MedicineInfoDialog(m,{infoMed=null},
+        infoMed?.let{m->MedicineInfoDialog(m,
+            (0 until m.doses).map{dose->schedules[alarmId(m,dose)]},
+            {infoMed=null},
             {infoMed=null;editingMedicine=m},
             {infoMed=null;pendingRemoval=m})}
         if(adding)AddMedicineDialog({adding=false}){name,doses,info->
@@ -295,11 +297,11 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
             history=false
         }
 
-        Column(Modifier.fillMaxSize().background(Color(0xFFF9FBFD)).safeDrawingPadding()){
+        Column(Modifier.fillMaxSize().background(Color(0xFF010E17)).safeDrawingPadding()){
             BrandHeader()
-            Text("Calendario de tomas",color=Color(0xFF15273C),fontWeight=FontWeight.Bold,
+            Text("Calendario de tomas",color=Color.White,fontWeight=FontWeight.Bold,
                 fontSize=20.sp,modifier=Modifier.padding(start=20.dp,top=6.dp))
-            Text(dayLabel,color=Color(0xFF1166C9),fontSize=15.sp,
+            Text(dayLabel,color=Color(0xFF5EEAD4),fontSize=15.sp,
                 modifier=Modifier.padding(start=20.dp,bottom=8.dp))
             CalendarStrip(weekStart,currentDate,
                 onPrevious={weekStart=weekStart.minusWeeks(1)},
@@ -314,7 +316,7 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
             }
             if(slots.isEmpty()){
                 Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){
-                    Text("Agrega un medicamento para comenzar",color=Color(0xFF526171))
+                    Text("Agrega un medicamento para comenzar",color=Color(0xFFA7B7C8))
                 }
             }else LazyColumn(
                 modifier=Modifier.fillMaxWidth().weight(1f),
@@ -338,20 +340,10 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
     }
 }
 @Composable private fun BrandHeader(){
-    Row(Modifier.fillMaxWidth().padding(start=18.dp,end=18.dp,top=12.dp,bottom=2.dp),
-        verticalAlignment=Alignment.CenterVertically){
-        Image(painter=painterResource(R.drawable.ic_mediyiyo),
-            contentDescription="Cápsula Mediyiyo",modifier=Modifier.size(64.dp),
-            contentScale=ContentScale.Fit)
-        Spacer(Modifier.width(8.dp))
-        Column{
-            Row(verticalAlignment=Alignment.CenterVertically){
-                Text("Medi",color=Color(0xFF0869DD),fontWeight=FontWeight.ExtraBold,fontSize=29.sp)
-                Text("yiyo",color=Color(0xFF05BFA9),fontWeight=FontWeight.ExtraBold,fontSize=29.sp)
-            }
-            Text("tomate las pastillas wn!",color=Color(0xFF34465A),fontSize=13.sp)
-        }
-    }
+    Image(painter=painterResource(R.drawable.mediyiyo_brand_header),
+        contentDescription="Mediyiyo, tomate las pastillas wn!",
+        modifier=Modifier.fillMaxWidth().height(90.dp).padding(horizontal=14.dp),
+        alignment=Alignment.CenterStart,contentScale=ContentScale.Fit)
 }
 
 @Composable private fun CalendarStrip(
@@ -371,8 +363,8 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
                 .clickable{onSelect(date)}.padding(vertical=9.dp),
                 horizontalAlignment=Alignment.CenterHorizontally){
                 Text(date.format(DateTimeFormatter.ofPattern("EEEEE",locale)).uppercase(locale),
-                    color=if(active)Color(0xFF115DB3)else Color(0xFF677788),fontSize=12.sp)
-                Text("${date.dayOfMonth}",color=Color(0xFF15273C),
+                    color=if(active)Color(0xFF115DB3)else Color(0xFFA7B7C8),fontSize=12.sp)
+                Text("${date.dayOfMonth}",color=if(active)Color(0xFF15273C)else Color.White,
                     fontWeight=if(active)FontWeight.Bold else FontWeight.Medium,fontSize=18.sp)
             }
         }
@@ -389,30 +381,38 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
     val completed=actual!=null
     Row(Modifier.fillMaxWidth().heightIn(min=112.dp)
         .background(if(completed)Color(0xFFD5F2D8)else Color(0xFFF0F2F5),RoundedCornerShape(22.dp))
-        .clickable(onClick=onTap).padding(horizontal=14.dp,vertical=14.dp),
+        .padding(horizontal=14.dp,vertical=14.dp),
         verticalAlignment=Alignment.CenterVertically){
-        Box(Modifier.size(46.dp).background(Color.White,RoundedCornerShape(14.dp)),
+        Box(Modifier.size(46.dp).background(Color.White,RoundedCornerShape(14.dp))
+            .clickable(onClick=onDetails),
             contentAlignment=Alignment.Center){
             Image(painter=painterResource(R.drawable.ic_mediyiyo),contentDescription=null,
                 modifier=Modifier.size(38.dp))
         }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)){
+        Column(Modifier.weight(1f).clickable(onClick=onDetails).padding(vertical=5.dp)){
             Text(medicine.name,color=Color(0xFF172536),fontWeight=FontWeight.Bold,fontSize=16.sp,
                 lineHeight=19.sp)
             Text(if(medicine.doses>1)"Toma ${dose+1} · ${medicine.detail}" else medicine.detail,
                 color=Color(0xFF39485A),fontSize=12.sp)
             medicine.note?.let{Text(it,color=Color(0xFF276E63),fontSize=11.sp)}
-            if(medicine.info.isNotBlank()) Text(medicine.info,color=Color(0xFF536273),
+            val summary=MedicineCatalog.descriptionFor(medicine.name,medicine.info)
+            if(summary.isNotBlank()) Text(summary,color=Color(0xFF536273),
                 maxLines=2,fontSize=11.sp,lineHeight=14.sp)
             if(completed) Text("Tomado a las $actual",color=Color(0xFF216642),fontSize=11.sp)
         }
         Spacer(Modifier.width(8.dp))
-        Column(horizontalAlignment=Alignment.End){
-            Text(planned?:"--:--",color=Color(0xFF15273C),fontSize=20.sp,
+        Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(88.dp)){
+            Text(planned?:"--:--",color=Color(0xFF15273C),fontSize=18.sp,
                 fontWeight=FontWeight.Bold,modifier=Modifier.clickable(onClick=onSchedule))
             Text(if(planned==null)"Configurar" else "Editar hora",color=Color(0xFF476277),
                 fontSize=10.sp,modifier=Modifier.clickable(onClick=onSchedule))
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.fillMaxWidth().background(Color(0xFF0A4B87),RoundedCornerShape(12.dp))
+                .clickable(onClick=onTap).padding(vertical=9.dp),contentAlignment=Alignment.Center){
+                Text(if(completed)"Ver toma" else "Confirmar",color=Color.White,
+                    fontSize=12.sp,fontWeight=FontWeight.Bold)
+            }
         }
         if(reorder) Column{
             TextButton(onClick=onUp,contentPadding=PaddingValues(0.dp)){Text("▲")}
@@ -446,14 +446,36 @@ private fun saveOrder(c:Context,list:List<Medicine>){c.getSharedPreferences("med
         }},confirmButton={TextButton(onClick=onDismiss){Text("Cerrar")}})
 }
 
-@Composable private fun MedicineInfoDialog(m:Medicine,onDismiss:()->Unit,onEdit:()->Unit,onRemove:()->Unit){
+@Composable private fun MedicineInfoDialog(
+    m:Medicine,plannedTimes:List<String?>,
+    onDismiss:()->Unit,onEdit:()->Unit,onRemove:()->Unit
+){
+    val description=MedicineCatalog.descriptionFor(m.name,m.info)
     AlertDialog(
         onDismissRequest=onDismiss,
         title={Text(m.name)},
-        text={Column{
-            Text(m.detail,fontWeight=FontWeight.Bold)
+        text={Column(Modifier.heightIn(max=430.dp).verticalScroll(rememberScrollState())){
+            Text("Dosis registrada",fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)
+            Text(m.detail)
             Spacer(Modifier.height(10.dp))
-            Text(if(m.info.isBlank())"No hay una descripción guardada para este medicamento." else m.info)
+            Text("Descripción y para qué se utiliza",fontWeight=FontWeight.Bold,
+                color=MaterialTheme.colorScheme.primary)
+            if(description.isBlank()){
+                Text("No hay una descripción guardada para este medicamento.")
+                TextButton(onClick=onEdit){Text("Añadir información personalizada")}
+            }else Text(description)
+            m.note?.let{
+                Spacer(Modifier.height(10.dp))
+                Text("Información adicional",fontWeight=FontWeight.Bold,
+                    color=MaterialTheme.colorScheme.primary)
+                Text(it)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("Horarios programados",fontWeight=FontWeight.Bold,
+                color=MaterialTheme.colorScheme.primary)
+            plannedTimes.forEachIndexed{dose,time->
+                Text("Toma ${dose+1}: ${time?:"Sin configurar"}")
+            }
             Spacer(Modifier.height(12.dp))
             Text("Información general. Sigue siempre la indicación y dosis entregadas por tu profesional de salud.",fontSize=12.sp)
         }},

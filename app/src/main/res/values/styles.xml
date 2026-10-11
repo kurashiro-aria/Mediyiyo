@@ -2,9 +2,9 @@
 <resources>
     <style name="Theme.Mediyiyo" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:statusBarColor">#F9FBFD</item>
-        <item name="android:navigationBarColor">#F9FBFD</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:statusBarColor">#010E17</item>
+        <item name="android:navigationBarColor">#010E17</item>
     </style>
 </resources>
